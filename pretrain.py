@@ -101,9 +101,26 @@ args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
 lr_current = state['lr']
 
+
+
+
 # Use CUDA
+#os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
+#use_cuda = torch.cuda.is_available()
+
+
+# Device selection
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
-use_cuda = torch.cuda.is_available()
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+elif torch.backends.mps.is_available() and os.environ.get('USE_MPS') == '1':
+    device = torch.device('mps')
+else:
+    device = torch.device('cpu')
+use_cuda = device.type == 'cuda'
+print('Using device: %s' % device)
+
+
 
 # Random seed
 if args.manualSeed is None:
@@ -141,9 +158,11 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, noise_sd):
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
-        if use_cuda:
-            inputs, targets = inputs.cuda(), targets.cuda()
-            inputs = inputs + torch.randn_like(inputs, device='cuda') * noise_sd
+        #if use_cuda:
+        #    inputs, targets = inputs.cuda(), targets.cuda()
+        #    inputs = inputs + torch.randn_like(inputs, device='cuda') * noise_sd
+        inputs, targets = inputs.to(device), targets.to(device)
+        inputs = inputs + torch.randn_like(inputs) * noise_sd
 
         with autocast():
             outputs = model(inputs)
@@ -194,9 +213,14 @@ def test(val_loader, model, criterion, epoch, use_cuda, noise_sd):
         for batch_idx, (inputs, targets) in enumerate(val_loader):
             data_time.update(time.time() - end)
 
-            if use_cuda:
-                inputs, targets = inputs.cuda(), targets.cuda()
-                inputs = inputs + torch.randn_like(inputs, device='cuda') * noise_sd
+
+
+            #if use_cuda:
+            #    inputs, targets = inputs.cuda(), targets.cuda()
+            #    inputs = inputs + torch.randn_like(inputs, device='cuda') * noise_sd
+
+            inputs, targets = inputs.to(device), targets.to(device)
+            inputs = inputs + torch.randn_like(inputs) * noise_sd
 
             outputs = model(inputs)
             loss = criterion(outputs, targets)
@@ -247,8 +271,10 @@ def adjust_learning_rate(optimizer, epoch):
         step = 1
         decay = args.gamma
         lr_current = args.lr * (decay ** (epoch // step))
-    elif epoch in args.schedule:
-        lr_current *= args.gamma
+    #elif epoch in args.schedule:
+    #    lr_current *= args.gamma
+    elif args.lr_type == 'step3':
+        lr_current = args.lr * (args.gamma ** sum(1 for m in args.schedule if epoch >= m))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr_current
 
@@ -267,11 +293,13 @@ if __name__ == '__main__':
     print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
     cudnn.benchmark = True
 
-    criterion = nn.CrossEntropyLoss().cuda()
+    #criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scaler = GradScaler()
 
-    model = model.cuda()
+    #model = model.cuda()
+    model = model.to(device)
 
     title = 'ImageNet-' + args.arch
     if args.resume:

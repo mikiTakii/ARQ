@@ -1,0 +1,4 @@
+data/
+checkpoint/
+train.log
+__pycache__/

@@ -118,10 +118,10 @@ def get_dataset(dataset_name, batch_size, n_worker, data_root='data', for_incept
         valset = torchvision.datasets.CIFAR10(root=valdir, train=False, download=True, transform=val_transform)
 
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True,
-                                                num_workers=2, pin_memory=True)
+                                                num_workers=n_worker, pin_memory=True)
 
         val_loader = torch.utils.data.DataLoader(valset, batch_size=100, shuffle=False,
-                                                num_workers=2, pin_memory=True)
+                                                num_workers=n_worker, pin_memory=True)
 
         n_class = 10
     else:
