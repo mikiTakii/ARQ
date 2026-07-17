@@ -322,7 +322,8 @@ if __name__ == '__main__':
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title)
         logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.'])
 
-    tf_writer = SummaryWriter(logdir=os.path.join(args.checkpoint, 'logs'))
+    #tf_writer = SummaryWriter(logdir=os.path.join(args.checkpoint, 'logs'))
+    tf_writer = SummaryWriter(os.path.join(args.checkpoint, 'logs'))
     print('save the checkpoint to ', args.checkpoint)
 
     if args.evaluate:
