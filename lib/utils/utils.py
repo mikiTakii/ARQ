@@ -222,7 +222,7 @@ def measure_model(model, H, W):
     global count_ops, count_params
     count_ops = 0
     count_params = 0
-    ddata = torch.zeros(1, 3, H, W).to(next(model.parameters()).device)
+    data = torch.zeros(1, 3, H, W).to(next(model.parameters()).device)
 
     def should_measure(x):
         return is_leaf(x)
