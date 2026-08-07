@@ -15,4 +15,4 @@ python -W ignore rl_quantize.py     \
  --sigma 0.5                        \
  --n1 100                            \
  --n2 200                          \
- --train_episode 100
+ --train_episode 11
