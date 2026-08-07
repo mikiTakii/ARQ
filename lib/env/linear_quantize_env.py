@@ -47,7 +47,11 @@ class LinearQuantizeEnv:
 
         self.finetune_lr = args.finetune_lr
         self.optimizer = optim.SGD(model.parameters(), lr=args.finetune_lr, momentum=0.9, weight_decay=1e-5)
-        self.criterion = nn.CrossEntropyLoss().cuda()
+        #self.criterion = nn.CrossEntropyLoss().cuda()
+
+        self.device = next(model.parameters()).device
+        self.criterion = nn.CrossEntropyLoss().to(self.device)
+
         self.pretrained_model = pretrained_model
         self.n_data_worker = n_data_worker
         self.batch_size = batch_size
@@ -279,7 +283,8 @@ class LinearQuantizeEnv:
     def _action_wall(self, action):
         assert len(self.strategy) == self.cur_ind
         # limit the action to certain range
-        action = float(action)
+        #action = float(action)
+        action = float(np.asarray(action).reshape(-1)[0])
         min_bit, max_bit = self.bound_list[self.cur_ind]
         lbound, rbound = min_bit - 0.5, max_bit + 0.5  # same stride length for each bit
         action = (rbound - lbound) * action + lbound
@@ -401,6 +406,8 @@ class LinearQuantizeEnv:
                                 4816896, 677376, 7225344, 10838016, 1016064, 10838016, 10838016, 1016064, 10838016, 10838016, 
                                 290304, 4515840, 7526400, 423360, 7526400, 7526400, 423360, 7526400, 7526400, 423360, 
                                 15052800, 20070400, 1280000]
+            elif self.model_name == 'qalexnet':
+                latency_list = [70276800, 223948800, 112140288, 149520384, 99680256, 37748736, 16777216, 40960]
         return latency_list.copy()
 
     def _finetune(self, train_loader, model, epochs=1, verbose=True):
@@ -420,9 +427,11 @@ class LinearQuantizeEnv:
         bar = Bar('train:', max=len(train_loader))
         for epoch in range(epochs):
             for i, (inputs, targets) in enumerate(train_loader):
-                inputs, targets = inputs.cuda(), targets.cuda()
-                inputs = inputs.cuda() + torch.randn_like(inputs, device='cuda') * self.sigma
+                #inputs, targets = inputs.cuda(), targets.cuda()
+                #inputs = inputs.cuda() + torch.randn_like(inputs, device='cuda') * self.sigma
 
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                inputs = inputs + torch.randn_like(inputs) * self.sigma
                 # measure data loading time
                 data_time.update(time() - end)
                 if self.data_type != 'cifar10':
@@ -510,8 +519,11 @@ class LinearQuantizeEnv:
                 # measure data loading time
                 data_time.update(time() - end)
 
-                inputs, targets = inputs.cuda(), targets.cuda()
-                inputs = inputs.cuda() + torch.randn_like(inputs, device='cuda') * self.sigma
+                #inputs, targets = inputs.cuda(), targets.cuda()
+                #inputs = inputs.cuda() + torch.randn_like(inputs, device='cuda') * self.sigma
+
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                inputs = inputs + torch.randn_like(inputs) * self.sigma
 
                 # compute output                
                 if self.data_type != 'cifar10':
@@ -568,12 +580,19 @@ class LinearQuantizeEnv:
         count=n1
         
 
+
         if dataset == 'cifar10':
             gamma = 0.99
             dataset = Dataset.CIFAR10
         elif dataset == 'imagenet':
             gamma = 0.995
-            dataset = Dataset.IMAGENET 
+            dataset = Dataset.IMAGENET
+        elif dataset == 'imagenet10':
+            gamma = 0.995
+            dataset = Dataset.IMAGENET10
+        elif dataset == 'imagenet100':
+            gamma = 0.995
+            dataset = Dataset.IMAGENET100
 
 
         if quantizable_idx == None and self.evaluate == True:

@@ -12,8 +12,14 @@ from lib.rl.memory import SequentialMemory
 from lib.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
 
 criterion = nn.MSELoss()
+#USE_CUDA = torch.cuda.is_available()
+if torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device('mps')
+else:
+    DEVICE = torch.device('cpu')
 USE_CUDA = torch.cuda.is_available()
-
 
 class Actor(nn.Module):
     def __init__(self, nb_states, nb_actions, hidden1=400, hidden2=300, init_w=3e-3):
@@ -108,7 +114,9 @@ class DDPG(object):
         self.is_training = True
 
         #
-        if USE_CUDA: self.cuda()
+        #if USE_CUDA: self.cuda()
+        if DEVICE.type == 'cuda':
+            self.cuda()
 
         # moving average baseline
         self.moving_average = None
@@ -179,6 +187,10 @@ class DDPG(object):
         self.actor_target.cuda()
         self.critic.cuda()
         self.critic_target.cuda()
+        #self.actor.to(DEVICE)
+        #self.actor_target.to(DEVICE)
+        #self.critic.to(DEVICE)
+        #self.critic_target.to(DEVICE)
 
     def observe(self, r_t, s_t, s_t1, a_t, done):
         if self.is_training:

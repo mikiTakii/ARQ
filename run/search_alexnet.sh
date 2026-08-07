@@ -1,0 +1,18 @@
+python -W ignore rl_quantize.py     \
+ --arch qalexnet                    \
+ --dataset imagenet10               \
+ --dataset_root data/imagenette2-320 \
+ --suffix sigma0.5_4bit             \
+ --preserve_ratio 0.25              \
+ --float_bit 32                     \
+ --max_bit 8                        \
+ --min_bit 2                        \
+ --train_size 5000                  \
+ --val_size 500                     \
+ --n_worker 4                       \
+ --data_bsize 64                    \
+ --linear_quantization              \
+ --sigma 0.5                        \
+ --n1 100                            \
+ --n2 200                          \
+ --train_episode 100

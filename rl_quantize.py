@@ -27,7 +27,7 @@ for name in customized_models.__dict__:
         models.__dict__[name] = customized_models.__dict__[name]
 
 model_names = default_model_names + customized_models_names
-print('support models: ', model_names)
+#print('support models: ', model_names)
 
 
 def train(num_episode, agent, env, output, linear_quantization=False, debug=False, evaluate=False):
@@ -216,13 +216,24 @@ if __name__ == "__main__":
     text_writer = open(os.path.join(args.output, 'log.txt'), 'w')
     print('==> Output path: {}...'.format(args.output))
 
+    #os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
+    #assert torch.cuda.is_available(), 'CUDA is needed for CNN'
+
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
-    assert torch.cuda.is_available(), 'CUDA is needed for CNN'
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    #elif torch.backends.mps.is_available():
+    #    device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    print('Using device:', device)
 
     if args.seed > 0:
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        torch.cuda.manual_seed_all(args.seed)
+        #torch.cuda.manual_seed_all(args.seed)
+        if device.type == 'cuda':
+            torch.cuda.manual_seed_all(args.seed)
 
     if args.dataset == 'imagenet':
         num_classes = 1000
@@ -238,14 +249,21 @@ if __name__ == "__main__":
 
     model = models.__dict__[args.arch](pretrained=True, num_classes=num_classes)
     
-    if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
+    '''if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
         model.features = torch.nn.DataParallel(model.features)
         model.cuda()
     else:
         model = model.cuda()
     pretrained_model = deepcopy(model.state_dict())
     print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
-    cudnn.benchmark = True
+    cudnn.benchmark = True'''
+
+    model = model.to(device)
+    pretrained_model = deepcopy(model.state_dict())
+    print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters()) / 1000000.0))
+    if device.type == 'cuda':
+        cudnn.benchmark = True
+
     ######## Replace the policy here with your own policy ######### 
     policy = [[8, -1], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 4], [2, 4], [5, 5], [2, 4], [2, 4], [2, 5], [2, 5], [3, 5], [3, 4], [4, 4], [3, 4], [3, 4], [3, 4], [3, 4], [8, 8]]
     env = LinearQuantizeEnv(model, pretrained_model, args.dataset, args.dataset_root,

@@ -334,7 +334,8 @@ def calibrate(model, loader):
         if isinstance(module, QModule):
             module.set_calibrate(calibrate=True)
     inputs, _ = next(iter(loader))
-    inputs = inputs.to('cuda:0', non_blocking=True)
+    #inputs = inputs.to('cuda:0', non_blocking=True)
+    inputs = inputs.to(next(model.parameters()).device, non_blocking=True)
     with torch.no_grad():
         model(inputs)
     for name, module in model.named_modules():
